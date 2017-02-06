@@ -1,5 +1,5 @@
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import read_restaurants, insert_rest
+import read_restaurants, insert_rest, delete
 import cgi
 import re
 
@@ -17,7 +17,7 @@ class webserverHandler(BaseHTTPRequestHandler):
                 for restaurant in restaurants:
                     output += "<li><h2>"+restaurant.name+ "</h2></li>"
                     output += "<a href='/restaurants/"+str(restaurant.id) +"/edit' style='color:blue'>Edit</a><br>" \
-                               "<a href='#' style='color:red'>Delete</a><br><br>"
+                               "<a href='/restaurants/"+str(restaurant.id)+"/delete' style='color:red'>Delete</a><br><br>"
                 output += "</ul></body></html>"
 
                 self.wfile.write(output)
@@ -59,6 +59,27 @@ class webserverHandler(BaseHTTPRequestHandler):
                 print output
                 return
 
+            if self.path.endswith('/delete'):
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                id = re.findall(r'\d+', self.path)[0]
+                restaurant = read_restaurants.getRestaurant(int(id))
+                output = "<html><body>"
+                output += '<form method="POST" enctype="multipart/form-data" action="/restaurants">' \
+                          '<h1>Are you sure you want to delete '+restaurant.name+'?</h1>' \
+                          '<input name="del_id" type="hidden" value="' + str(id) + '">' \
+                          '<input type="submit" value="Yes">' \
+                          '</form>'
+                output += "</body></html>"
+
+                self.wfile.write(output)
+                print output
+                return
+
+
+
+
 
 
 
@@ -76,15 +97,20 @@ class webserverHandler(BaseHTTPRequestHandler):
                 restName = fields.get('restaurant')
                 name = fields.get('restaurant1')
                 id = fields.get('id')
+                del_id = fields.get('del_id')
                 print "Restaurant: %s"%restName
                 print "Name: %s"%name
                 print "Id: %s"%id
+                print "Delete ID: %s"%del_id
                 if restName!= None:
                     insert_rest.insertRestaurant(restName[0])
-                else:
+                elif (name):
                     if (id):
                         print "Hello"
                         read_restaurants.modifyRestaurant(int(id[0]), name[0])
+                else:
+                    delete.deleteRestaurant(int(del_id[0]))
+
 
             output = ""
             output += "<html><body>"
@@ -92,8 +118,9 @@ class webserverHandler(BaseHTTPRequestHandler):
             restaurants = read_restaurants.getRestaurants()
             for restaurant in restaurants:
                 output += "<li><h2>" + restaurant.name + "</h2></li>"
-                output += "<a href='#' style='color:blue'>Edit</a><br>" \
-                          "<a href='#' style='color:red'>Delete</a><br><br>"
+                output += "<a href='/restaurants/" + str(restaurant.id) + "/edit' style='color:blue'>Edit</a><br>" \
+                          "<a href='/restaurants/" + str(restaurant.id) + "/delete' style='color:red'>Delete</a><br><br> "
+
             output += "</ul></body></html>"
 
             self.wfile.write(output)
